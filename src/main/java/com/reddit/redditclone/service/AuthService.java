@@ -6,4 +6,6 @@ import org.springframework.stereotype.Service;
 
 public interface AuthService {
     void signup(RegisterRequest registerRequest);
+
+    void verifyAccount(String token);
 }

@@ -1,6 +1,7 @@
 package com.reddit.redditclone.service.impl;
 
 import com.reddit.redditclone.dto.RegisterRequest;
+import com.reddit.redditclone.exceptions.SpringRedditException;
 import com.reddit.redditclone.model.NotificationEmail;
 import com.reddit.redditclone.model.User;
 import com.reddit.redditclone.model.VerificationToken;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -28,7 +30,7 @@ public class AuthServiceImpl  implements AuthService {
     @Transactional
     public void signup(RegisterRequest registerRequest) {
         User user = new User();
-        user.setUserName(registerRequest.getUsername());
+        user.setUsername(registerRequest.getUsername());
         user.setEmail(registerRequest.getEmail());
         user.setPassword(registerRequest.getPassword());
         user.setCreatedDate(Instant.now());
@@ -41,6 +43,21 @@ public class AuthServiceImpl  implements AuthService {
                 user.getEmail(),"Thank you for signing up to Spring Reddit, " +
                 "please click on the url below to activate your account : " +
                 "http://localhost:8080/api/auth/accountVerification/"+ token));
+    }
+
+    @Override
+    public void verifyAccount(String token) {
+        Optional<VerificationToken> verificationToken = verificationTokenRepository.findByToken(token);
+        verificationToken.orElseThrow(() -> new SpringRedditException("invalid Token"));
+        fetchUserAndEnable(verificationToken.get());
+    }
+
+    @Transactional
+    private void fetchUserAndEnable(VerificationToken verificationToken) {
+        String username = verificationToken.getUser().getUsername();
+        User user = userRepository.findByUsername(username).orElseThrow(()-> new SpringRedditException("User not found with name: " + username));
+        user.setEnabled(true);
+        userRepository.save(user);
     }
 
     private String generateVerificationToken(User user){
